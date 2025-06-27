@@ -1,0 +1,2016 @@
+<!-- <!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Management System</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+    
+    .location-list {
+      list-style-type: none;
+    }
+    
+    .country-item, .state-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .country-item {
+      background-color: #e3f2fd;
+      border-left: 4px solid #3498db;
+      font-weight: bold;
+    }
+    
+    .state-item {
+      background-color: #e8f5e9;
+      border-left: 4px solid #2ecc71;
+      margin-left: 20px;
+    }
+    
+    .city-item {
+      background-color: #f3e5f5;
+      border-left: 4px solid #9b59b6;
+      margin-left: 40px;
+      padding: 8px;
+      list-style-type: none;
+    }
+    
+    .toggle-btn {
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+    
+    .error {
+      color: #e74c3c;
+      padding: 10px;
+      background-color: #fadbd8;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .success {
+      color: #27ae60;
+      padding: 10px;
+      background-color: #d5f5e3;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Location Management System</h1>
+    
+    <div id="view-locations">
+      <h2>All Locations</h2>
+      <div id="location-data">
+        <div class="loading">Loading data...</div>
+      </div>
+    </div>
+    
+    <div id="add-location" style="margin-top: 30px;">
+      <h2>Add New Location</h2>
+      <div class="form-group">
+        <label>Location Type:</label>
+        <select id="location-type" onchange="showLocationForm()">
+          <option value="">Select Type</option>
+          <option value="country">Country</option>
+          <option value="state">State</option>
+          <option value="city">City</option>
+        </select>
+      </div>
+      
+      <div id="country-form" style="display: none;">
+        <div id="country-message"></div>
+        <div class="form-group">
+          <label for="country-name">Country Name:</label>
+          <input type="text" id="country-name" placeholder="Enter country name">
+        </div>
+        <button onclick="addCountry()">Add Country</button>
+      </div>
+      
+      <div id="state-form" style="display: none;">
+        <div id="state-message"></div>
+        <div class="form-group">
+          <label for="state-name">State Name:</label>
+          <input type="text" id="state-name" placeholder="Enter state name">
+        </div>
+        <div class="form-group">
+          <label for="state-country">Country:</label>
+          <select id="state-country" onchange="filterStates()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <button onclick="addState()">Add State</button>
+      </div>
+      
+      <div id="city-form" style="display: none;">
+        <div id="city-message"></div>
+        <div class="form-group">
+          <label for="city-name">City Name:</label>
+          <input type="text" id="city-name" placeholder="Enter city name">
+        </div>
+        <div class="form-group">
+          <label for="city-country">Country:</label>
+          <select id="city-country" onchange="filterStatesForCity()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="city-state">State:</label>
+          <select id="city-state" onchange="filterCities()">
+            <option value="">Select State</option>
+          </select>
+        </div>
+        <button onclick="addCity()">Add City</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let countries = [];
+    let states = [];
+    let cities = [];
+    let allStates = []; // Store all states for filtering
+    let allCities = []; // Store all cities for filtering
+    
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadAllData();
+      loadCountriesForForms();
+    });
+    
+    // Show appropriate form based on selection
+    function showLocationForm() {
+      const type = document.getElementById('location-type').value;
+      document.getElementById('country-form').style.display = 'none';
+      document.getElementById('state-form').style.display = 'none';
+      document.getElementById('city-form').style.display = 'none';
+      
+      if (type === 'country') {
+        document.getElementById('country-form').style.display = 'block';
+      } else if (type === 'state') {
+        document.getElementById('state-form').style.display = 'block';
+      } else if (type === 'city') {
+        document.getElementById('city-form').style.display = 'block';
+      }
+    }
+    
+    // Load all data
+    async function loadAllData() {
+      const locationData = document.getElementById('location-data');
+      locationData.innerHTML = '<div class="loading">Loading data...</div>';
+      
+      try {
+        const [countriesRes, statesRes, citiesRes] = await Promise.all([
+          fetch('/api/countries').then(res => res.json()),
+          fetch('/api/states?populate=country').then(res => res.json()),
+          fetch('/api/cities?populate=state').then(res => res.json())
+        ]);
+        
+        countries = countriesRes;
+        states = statesRes;
+        cities = citiesRes;
+        allStates = statesRes; // Store all states
+        allCities = citiesRes; // Store all cities
+        
+        renderLocationData();
+      } catch (error) {
+        locationData.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+      }
+    }
+    
+    // Render the location data
+    function renderLocationData() {
+      const locationData = document.getElementById('location-data');
+      
+      // Group states by country
+      const statesByCountry = {};
+      states.forEach(state => {
+        const countryId = state.country._id;
+        if (!statesByCountry[countryId]) {
+          statesByCountry[countryId] = [];
+        }
+        statesByCountry[countryId].push(state);
+      });
+      
+      // Group cities by state
+      const citiesByState = {};
+      cities.forEach(city => {
+        const stateId = city.state._id;
+        if (!citiesByState[stateId]) {
+          citiesByState[stateId] = [];
+        }
+        citiesByState[stateId].push(city);
+      });
+      
+      // Build the HTML
+      let html = '<ul class="location-list">';
+      
+      countries.forEach(country => {
+        const countryStates = statesByCountry[country._id] || [];
+        
+        html += `
+          <li class="country-item" onclick="toggleItem('country-${country._id}')">
+            <span>${country.name} (${countryStates.length} states)</span>
+            <button class="toggle-btn">+</button>
+          </li>
+          <ul id="country-${country._id}" class="nested" style="display:none;">
+        `;
+        
+        countryStates.forEach(state => {
+          const stateCities = citiesByState[state._id] || [];
+          
+          html += `
+            <li class="state-item" onclick="toggleItem('state-${state._id}')">
+              <span>${state.name} (${stateCities.length} cities)</span>
+              <button class="toggle-btn">+</button>
+            </li>
+            <ul id="state-${state._id}" class="nested" style="display:none;">
+          `;
+          
+          stateCities.forEach(city => {
+            html += `
+              <li class="city-item">${city.name}</li>
+            `;
+          });
+          
+          html += `</ul>`;
+        });
+        
+        html += `</ul>`;
+      });
+      
+      html += `</ul>`;
+      locationData.innerHTML = html;
+    }
+    
+    // Toggle expand/collapse
+    function toggleItem(id) {
+      const element = document.getElementById(id);
+      const btn = element.previousElementSibling.querySelector('.toggle-btn');
+      
+      if (element.style.display === "none") {
+        element.style.display = "block";
+        btn.textContent = "-";
+      } else {
+        element.style.display = "none";
+        btn.textContent = "+";
+      }
+    }
+    
+    // Load countries for forms
+    async function loadCountriesForForms() {
+      try {
+        const response = await fetch('/api/countries');
+        const data = await response.json();
+        
+        const stateCountrySelect = document.getElementById('state-country');
+        const cityCountrySelect = document.getElementById('city-country');
+        
+        // Clear existing options (keeping the first "Select Country" option)
+        stateCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        cityCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        
+        // Add countries to both selects
+        data.forEach(country => {
+          const option1 = document.createElement('option');
+          option1.value = country._id;
+          option1.textContent = country.name;
+          stateCountrySelect.appendChild(option1);
+          
+          const option2 = document.createElement('option');
+          option2.value = country._id;
+          option2.textContent = country.name;
+          cityCountrySelect.appendChild(option2);
+        });
+      } catch (error) {
+        console.error('Error loading countries:', error);
+      }
+    }
+    
+    // Filter states based on selected country
+    function filterStates() {
+      const countryId = document.getElementById('state-country').value;
+      const stateSelect = document.getElementById('state-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Filter states for city form based on selected country
+    function filterStatesForCity() {
+      const countryId = document.getElementById('city-country').value;
+      const stateSelect = document.getElementById('city-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      stateSelect.disabled = !countryId;
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Filter cities based on selected state
+    function filterCities() {
+      const stateId = document.getElementById('city-state').value;
+      const citySelect = document.getElementById('city-city');
+      
+      citySelect.innerHTML = '<option value="">Select City</option>';
+      citySelect.disabled = !stateId;
+      
+      if (!stateId) return;
+      
+      const filteredCities = allCities.filter(city => city.state._id === stateId);
+      
+      filteredCities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city._id;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
+      });
+    }
+    
+    // Add new country
+    async function addCountry() {
+      const name = document.getElementById('country-name').value.trim();
+      const messageDiv = document.getElementById('country-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a country name</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/countries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">Country added successfully!</div>';
+          document.getElementById('country-name').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add country'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new state
+    async function addState() {
+      const name = document.getElementById('state-name').value.trim();
+      const countryId = document.getElementById('state-country').value;
+      const messageDiv = document.getElementById('state-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a state name</div>';
+        return;
+      }
+      
+      if (!countryId) {
+        messageDiv.innerHTML = '<div class="error">Please select a country</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/states', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, country: countryId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">State added successfully!</div>';
+          document.getElementById('state-name').value = '';
+          document.getElementById('state-country').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add state'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new city
+    async function addCity() {
+      const name = document.getElementById('city-name').value.trim();
+      const stateId = document.getElementById('city-state').value;
+      const messageDiv = document.getElementById('city-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a city name</div>';
+        return;
+      }
+      
+      if (!stateId) {
+        messageDiv.innerHTML = '<div class="error">Please select a state</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/cities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, state: stateId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">City added successfully!</div>';
+          document.getElementById('city-name').value = '';
+          document.getElementById('city-country').value = '';
+          document.getElementById('city-state').innerHTML = '<option value="">Select State</option>';
+          document.getElementById('city-state').disabled = true;
+          loadAllData();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add city'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html> -->
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Management System</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+    
+    .location-list {
+      list-style-type: none;
+    }
+    
+    .country-item, .state-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .country-item {
+      background-color: #e3f2fd;
+      border-left: 4px solid #3498db;
+      font-weight: bold;
+    }
+    
+    .state-item {
+      background-color: #e8f5e9;
+      border-left: 4px solid #2ecc71;
+      margin-left: 20px;
+    }
+    
+    .city-item {
+      background-color: #f3e5f5;
+      border-left: 4px solid #9b59b6;
+      margin-left: 40px;
+      padding: 8px;
+      list-style-type: none;
+    }
+    
+    .toggle-btn {
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+    
+    .error {
+      color: #e74c3c;
+      padding: 10px;
+      background-color: #fadbd8;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .success {
+      color: #27ae60;
+      padding: 10px;
+      background-color: #d5f5e3;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    
+    tr:hover {
+      background-color: #e3f2fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Location Management System</h1>
+    
+    <div id="view-locations">
+      <h2>All Locations</h2>
+      <div id="location-data">
+        <div class="loading">Loading data...</div>
+      </div>
+    </div>
+    
+    <div id="add-location" style="margin-top: 30px;">
+      <h2>Add New Location</h2>
+      <div class="form-group">
+        <label>Location Type:</label>
+        <select id="location-type" onchange="showLocationForm()">
+          <option value="">Select Type</option>
+          <option value="country">Country</option>
+          <option value="state">State</option>
+          <option value="city">City</option>
+        </select>
+      </div>
+      
+      <div id="country-form" style="display: none;">
+        <div id="country-message"></div>
+        <div class="form-group">
+          <label for="country-name">Country Name:</label>
+          <input type="text" id="country-name" placeholder="Enter country name">
+        </div>
+        <button onclick="addCountry()">Add Country</button>
+      </div>
+      
+      <div id="state-form" style="display: none;">
+        <div id="state-message"></div>
+        <div class="form-group">
+          <label for="state-name">State Name:</label>
+          <input type="text" id="state-name" placeholder="Enter state name">
+        </div>
+        <div class="form-group">
+          <label for="state-country">Country:</label>
+          <select id="state-country" onchange="filterStates()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <button onclick="addState()">Add State</button>
+      </div>
+      
+      <div id="city-form" style="display: none;">
+        <div id="city-message"></div>
+        <div class="form-group">
+          <label for="city-name">City Name:</label>
+          <input type="text" id="city-name" placeholder="Enter city name">
+        </div>
+        <div class="form-group">
+          <label for="city-country">Country:</label>
+          <select id="city-country" onchange="filterStatesForCity()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="city-state">State:</label>
+          <select id="city-state" onchange="filterCities()">
+            <option value="">Select State</option>
+          </select>
+        </div>
+        <button onclick="addCity()">Add City</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let countries = [];
+    let states = [];
+    let cities = [];
+    let allStates = []; // Store all states for filtering
+    let allCities = []; // Store all cities for filtering
+    
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadAllData();
+      loadCountriesForForms();
+    });
+    
+    // Show appropriate form based on selection
+    function showLocationForm() {
+      const type = document.getElementById('location-type').value;
+      document.getElementById('country-form').style.display = 'none';
+      document.getElementById('state-form').style.display = 'none';
+      document.getElementById('city-form').style.display = 'none';
+      
+      if (type === 'country') {
+        document.getElementById('country-form').style.display = 'block';
+      } else if (type === 'state') {
+        document.getElementById('state-form').style.display = 'block';
+      } else if (type === 'city') {
+        document.getElementById('city-form').style.display = 'block';
+      }
+    }
+    
+    // Load all data
+    async function loadAllData() {
+      const locationData = document.getElementById('location-data');
+      locationData.innerHTML = '<div class="loading">Loading data...</div>';
+      
+      try {
+        const [countriesRes, statesRes, citiesRes] = await Promise.all([
+          fetch('/api/countries').then(res => res.json()),
+          fetch('/api/states?populate=country').then(res => res.json()),
+          fetch('/api/cities?populate=state').then(res => res.json())
+        ]);
+        
+        countries = countriesRes;
+        states = statesRes;
+        cities = citiesRes;
+        allStates = statesRes; // Store all states
+        allCities = citiesRes; // Store all cities
+        
+        renderLocationData();
+      } catch (error) {
+        locationData.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+      }
+    }
+    
+    // Render the location data in table format
+    function renderLocationData() {
+      const locationData = document.getElementById('location-data');
+      
+      // Create a table with all locations
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th>State</th>
+              <th>City</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      // Group states by country
+      const statesByCountry = {};
+      states.forEach(state => {
+        const countryId = state.country._id;
+        if (!statesByCountry[countryId]) {
+          statesByCountry[countryId] = [];
+        }
+        statesByCountry[countryId].push(state);
+      });
+      
+      // Group cities by state
+      const citiesByState = {};
+      cities.forEach(city => {
+        const stateId = city.state._id;
+        if (!citiesByState[stateId]) {
+          citiesByState[stateId] = [];
+        }
+        citiesByState[stateId].push(city);
+      });
+      
+      // Add rows to the table
+      countries.forEach(country => {
+        const countryStates = statesByCountry[country._id] || [];
+        
+        if (countryStates.length === 0) {
+          // Country with no states
+          html += `
+            <tr>
+              <td>${country.name}</td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+          `;
+        } else {
+          countryStates.forEach((state, stateIndex) => {
+            const stateCities = citiesByState[state._id] || [];
+            
+            if (stateCities.length === 0) {
+              // State with no cities
+              html += `
+                <tr>
+                  <td>${stateIndex === 0 ? country.name : ''}</td>
+                  <td>${state.name}</td>
+                  <td>-</td>
+                </tr>
+              `;
+            } else {
+              stateCities.forEach((city, cityIndex) => {
+                html += `
+                  <tr>
+                    <td>${stateIndex === 0 && cityIndex === 0 ? country.name : ''}</td>
+                    <td>${cityIndex === 0 ? state.name : ''}</td>
+                    <td>${city.name}</td>
+                  </tr>
+                `;
+              });
+            }
+          });
+        }
+      });
+      
+      html += `
+          </tbody>
+        </table>
+      `;
+      
+      locationData.innerHTML = html;
+    }
+    
+    // Load countries for forms
+    async function loadCountriesForForms() {
+      try {
+        const response = await fetch('/api/countries');
+        const data = await response.json();
+        
+        const stateCountrySelect = document.getElementById('state-country');
+        const cityCountrySelect = document.getElementById('city-country');
+        
+        // Clear existing options (keeping the first "Select Country" option)
+        stateCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        cityCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        
+        // Add countries to both selects
+        data.forEach(country => {
+          const option1 = document.createElement('option');
+          option1.value = country._id;
+          option1.textContent = country.name;
+          stateCountrySelect.appendChild(option1);
+          
+          const option2 = document.createElement('option');
+          option2.value = country._id;
+          option2.textContent = country.name;
+          cityCountrySelect.appendChild(option2);
+        });
+      } catch (error) {
+        console.error('Error loading countries:', error);
+      }
+    }
+    
+    // Filter states based on selected country
+    function filterStates() {
+      const countryId = document.getElementById('state-country').value;
+      const stateSelect = document.getElementById('state-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Filter states for city form based on selected country
+    function filterStatesForCity() {
+      const countryId = document.getElementById('city-country').value;
+      const stateSelect = document.getElementById('city-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      stateSelect.disabled = !countryId;
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Filter cities based on selected state
+    function filterCities() {
+      const stateId = document.getElementById('city-state').value;
+      const citySelect = document.getElementById('city-city');
+      
+      citySelect.innerHTML = '<option value="">Select City</option>';
+      citySelect.disabled = !stateId;
+      
+      if (!stateId) return;
+      
+      const filteredCities = allCities.filter(city => city.state._id === stateId);
+      
+      filteredCities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city._id;
+        option.textContent = city.name;
+        citySelect.appendChild(option);
+      });
+    }
+    
+    // Add new country
+    async function addCountry() {
+      const name = document.getElementById('country-name').value.trim();
+      const messageDiv = document.getElementById('country-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a country name</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/countries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">Country added successfully!</div>';
+          document.getElementById('country-name').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add country'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new state
+    async function addState() {
+      const name = document.getElementById('state-name').value.trim();
+      const countryId = document.getElementById('state-country').value;
+      const messageDiv = document.getElementById('state-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a state name</div>';
+        return;
+      }
+      
+      if (!countryId) {
+        messageDiv.innerHTML = '<div class="error">Please select a country</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/states', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, country: countryId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">State added successfully!</div>';
+          document.getElementById('state-name').value = '';
+          document.getElementById('state-country').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add state'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new city
+    async function addCity() {
+      const name = document.getElementById('city-name').value.trim();
+      const stateId = document.getElementById('city-state').value;
+      const messageDiv = document.getElementById('city-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a city name</div>';
+        return;
+      }
+      
+      if (!stateId) {
+        messageDiv.innerHTML = '<div class="error">Please select a state</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/cities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, state: stateId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">City added successfully!</div>';
+          document.getElementById('city-name').value = '';
+          document.getElementById('city-country').value = '';
+          document.getElementById('city-state').innerHTML = '<option value="">Select State</option>';
+          document.getElementById('city-state').disabled = true;
+          loadAllData();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add city'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>  -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Management System</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+    
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #7f8c8d;
+    }
+    
+    .error {
+      color: #e74c3c;
+      padding: 10px;
+      background-color: #fadbd8;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .success {
+      color: #27ae60;
+      padding: 10px;
+      background-color: #d5f5e3;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    
+    tr:hover {
+      background-color: #e3f2fd;
+    }
+    
+    .action-btn {
+      padding: 5px 10px;
+      margin: 0 2px;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+    
+    .edit-btn {
+      background-color: #f39c12;
+    }
+    
+    .delete-btn {
+      background-color: #e74c3c;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 50%;
+      border-radius: 5px;
+    }
+    
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .close:hover {
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Location Management System</h1>
+    
+    <div id="view-locations">
+      <h2>All Locations</h2>
+      <div id="location-data">
+        <div class="loading">Loading data...</div>
+      </div>
+    </div>
+    
+    <div id="add-location" style="margin-top: 30px;">
+      <h2>Add New Location</h2>
+      <div class="form-group">
+        <label>Location Type:</label>
+        <select id="location-type" onchange="showLocationForm()">
+          <option value="">Select Type</option>
+          <option value="country">Country</option>
+          <option value="state">State</option>
+          <option value="city">City</option>
+        </select>
+      </div>
+      
+      <div id="country-form" style="display: none;">
+        <div id="country-message"></div>
+        <div class="form-group">
+          <label for="country-name">Country Name:</label>
+          <input type="text" id="country-name" placeholder="Enter country name">
+        </div>
+        <button onclick="addCountry()">Add Country</button>
+      </div>
+      
+      <div id="state-form" style="display: none;">
+        <div id="state-message"></div>
+        <div class="form-group">
+          <label for="state-name">State Name:</label>
+          <input type="text" id="state-name" placeholder="Enter state name">
+        </div>
+        <div class="form-group">
+          <label for="state-country">Country:</label>
+          <select id="state-country" onchange="filterStates()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <button onclick="addState()">Add State</button>
+      </div>
+      
+      <div id="city-form" style="display: none;">
+        <div id="city-message"></div>
+        <div class="form-group">
+          <label for="city-name">City Name:</label>
+          <input type="text" id="city-name" placeholder="Enter city name">
+        </div>
+        <div class="form-group">
+          <label for="city-country">Country:</label>
+          <select id="city-country" onchange="filterStatesForCity()">
+            <option value="">Select Country</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="city-state">State:</label>
+          <select id="city-state" onchange="filterCities()">
+            <option value="">Select State</option>
+          </select>
+        </div>
+        <button onclick="addCity()">Add City</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Country Modal -->
+  <div id="editCountryModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('editCountryModal')">&times;</span>
+      <h2>Edit Country</h2>
+      <div id="edit-country-message"></div>
+      <div class="form-group">
+        <label for="edit-country-name">Country Name:</label>
+        <input type="text" id="edit-country-name">
+      </div>
+      <input type="hidden" id="edit-country-id">
+      <button onclick="updateCountry()">Update Country</button>
+    </div>
+  </div>
+
+  <!-- Edit State Modal -->
+  <div id="editStateModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('editStateModal')">&times;</span>
+      <h2>Edit State</h2>
+      <div id="edit-state-message"></div>
+      <div class="form-group">
+        <label for="edit-state-name">State Name:</label>
+        <input type="text" id="edit-state-name">
+      </div>
+      <div class="form-group">
+        <label for="edit-state-country">Country:</label>
+        <select id="edit-state-country">
+          <option value="">Select Country</option>
+        </select>
+      </div>
+      <input type="hidden" id="edit-state-id">
+      <button onclick="updateState()">Update State</button>
+    </div>
+  </div>
+
+  <!-- Edit City Modal -->
+  <div id="editCityModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('editCityModal')">&times;</span>
+      <h2>Edit City</h2>
+      <div id="edit-city-message"></div>
+      <div class="form-group">
+        <label for="edit-city-name">City Name:</label>
+        <input type="text" id="edit-city-name">
+      </div>
+      <div class="form-group">
+        <label for="edit-city-country">Country:</label>
+        <select id="edit-city-country" onchange="loadStatesForEditCity()">
+          <option value="">Select Country</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-city-state">State:</label>
+        <select id="edit-city-state">
+          <option value="">Select State</option>
+        </select>
+      </div>
+      <input type="hidden" id="edit-city-id">
+      <button onclick="updateCity()">Update City</button>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let countries = [];
+    let states = [];
+    let cities = [];
+    let allStates = []; // Store all states for filtering
+    let allCities = []; // Store all cities for filtering
+    
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadAllData();
+      loadCountriesForForms();
+    });
+    
+    // Show appropriate form based on selection
+    function showLocationForm() {
+      const type = document.getElementById('location-type').value;
+      document.getElementById('country-form').style.display = 'none';
+      document.getElementById('state-form').style.display = 'none';
+      document.getElementById('city-form').style.display = 'none';
+      
+      if (type === 'country') {
+        document.getElementById('country-form').style.display = 'block';
+      } else if (type === 'state') {
+        document.getElementById('state-form').style.display = 'block';
+      } else if (type === 'city') {
+        document.getElementById('city-form').style.display = 'block';
+      }
+    }
+    
+    // Load all data
+    async function loadAllData() {
+      const locationData = document.getElementById('location-data');
+      locationData.innerHTML = '<div class="loading">Loading data...</div>';
+      
+      try {
+        const [countriesRes, statesRes, citiesRes] = await Promise.all([
+          fetch('/api/countries').then(res => res.json()),
+          fetch('/api/states?populate=country').then(res => res.json()),
+          fetch('/api/cities?populate=state').then(res => res.json())
+        ]);
+        
+        countries = countriesRes;
+        states = statesRes;
+        cities = citiesRes;
+        allStates = statesRes; // Store all states
+        allCities = citiesRes; // Store all cities
+        
+        renderLocationData();
+      } catch (error) {
+        locationData.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+      }
+    }
+    
+    // Render the location data in table format with edit buttons
+    function renderLocationData() {
+      const locationData = document.getElementById('location-data');
+      
+      // Create a table with all locations
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th>State</th>
+              <th>City</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      // Group states by country
+      const statesByCountry = {};
+      states.forEach(state => {
+        const countryId = state.country._id;
+        if (!statesByCountry[countryId]) {
+          statesByCountry[countryId] = [];
+        }
+        statesByCountry[countryId].push(state);
+      });
+      
+      // Group cities by state
+      const citiesByState = {};
+      cities.forEach(city => {
+        const stateId = city.state._id;
+        if (!citiesByState[stateId]) {
+          citiesByState[stateId] = [];
+        }
+        citiesByState[stateId].push(city);
+      });
+      
+      // Add rows to the table
+      countries.forEach(country => {
+        const countryStates = statesByCountry[country._id] || [];
+        
+        if (countryStates.length === 0) {
+          // Country with no states
+          html += `
+            <tr>
+              <td>${country.name}</td>
+              <td>-</td>
+              <td>-</td>
+              <td>
+                <button class="action-btn edit-btn" onclick="openEditCountryModal('${country._id}', '${country.name}')">Edit</button>
+                <button class="action-btn delete-btn" onclick="deleteCountry('${country._id}')">Delete</button>
+              </td>
+            </tr>
+          `;
+        } else {
+          countryStates.forEach((state, stateIndex) => {
+            const stateCities = citiesByState[state._id] || [];
+            
+            if (stateCities.length === 0) {
+              // State with no cities
+              html += `
+                <tr>
+                  <td>${stateIndex === 0 ? country.name : ''}</td>
+                  <td>${state.name}</td>
+                  <td>-</td>
+                  <td>
+                    <button class="action-btn edit-btn" onclick="openEditStateModal('${state._id}', '${state.name}', '${state.country._id}')">Edit</button>
+                    <button class="action-btn delete-btn" onclick="deleteState('${state._id}')">Delete</button>
+                  </td>
+                </tr>
+              `;
+            } else {
+              stateCities.forEach((city, cityIndex) => {
+                html += `
+                  <tr>
+                    <td>${stateIndex === 0 && cityIndex === 0 ? country.name : ''}</td>
+                    <td>${cityIndex === 0 ? state.name : ''}</td>
+                    <td>${city.name}</td>
+                    <td>
+                      <button class="action-btn edit-btn" onclick="openEditCityModal('${city._id}', '${city.name}', '${state.country._id}', '${state._id}')">Edit</button>
+                      <button class="action-btn delete-btn" onclick="deleteCity('${city._id}')">Delete</button>
+                    </td>
+                  </tr>
+                `;
+              });
+            }
+          });
+        }
+      });
+      
+      html += `
+          </tbody>
+        </table>
+      `;
+      
+      locationData.innerHTML = html;
+    }
+    
+    // Load countries for forms
+    async function loadCountriesForForms() {
+      try {
+        const response = await fetch('/api/countries');
+        const data = await response.json();
+        
+        const stateCountrySelect = document.getElementById('state-country');
+        const cityCountrySelect = document.getElementById('city-country');
+        const editStateCountrySelect = document.getElementById('edit-state-country');
+        const editCityCountrySelect = document.getElementById('edit-city-country');
+        
+        // Clear existing options (keeping the first "Select Country" option)
+        stateCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        cityCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        editStateCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        editCityCountrySelect.innerHTML = '<option value="">Select Country</option>';
+        
+        // Add countries to all selects
+        data.forEach(country => {
+          const option1 = document.createElement('option');
+          option1.value = country._id;
+          option1.textContent = country.name;
+          stateCountrySelect.appendChild(option1);
+          
+          const option2 = document.createElement('option');
+          option2.value = country._id;
+          option2.textContent = country.name;
+          cityCountrySelect.appendChild(option2);
+          
+          const option3 = document.createElement('option');
+          option3.value = country._id;
+          option3.textContent = country.name;
+          editStateCountrySelect.appendChild(option3);
+          
+          const option4 = document.createElement('option');
+          option4.value = country._id;
+          option4.textContent = country.name;
+          editCityCountrySelect.appendChild(option4);
+        });
+      } catch (error) {
+        console.error('Error loading countries:', error);
+      }
+    }
+    
+    // Filter states based on selected country
+    function filterStates() {
+      const countryId = document.getElementById('state-country').value;
+      const stateSelect = document.getElementById('state-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Filter states for city form based on selected country
+    function filterStatesForCity() {
+      const countryId = document.getElementById('city-country').value;
+      const stateSelect = document.getElementById('city-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      stateSelect.disabled = !countryId;
+      
+      if (!countryId) return;
+      
+      const filteredStates = allStates.filter(state => state.country._id === countryId);
+      
+      filteredStates.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state._id;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      });
+    }
+    
+    // Load states for edit city modal
+    async function loadStatesForEditCity() {
+      const countryId = document.getElementById('edit-city-country').value;
+      const stateSelect = document.getElementById('edit-city-state');
+      
+      stateSelect.innerHTML = '<option value="">Select State</option>';
+      stateSelect.disabled = !countryId;
+      
+      if (!countryId) return;
+      
+      try {
+        const response = await fetch(`/api/states?country=${countryId}`);
+        const states = await response.json();
+        
+        states.forEach(state => {
+          const option = document.createElement('option');
+          option.value = state._id;
+          option.textContent = state.name;
+          stateSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading states:', error);
+      }
+    }
+    
+    // Open edit country modal
+    function openEditCountryModal(id, name) {
+      document.getElementById('edit-country-id').value = id;
+      document.getElementById('edit-country-name').value = name;
+      document.getElementById('edit-country-message').innerHTML = '';
+      document.getElementById('editCountryModal').style.display = 'block';
+    }
+    
+    // Open edit state modal
+    function openEditStateModal(id, name, countryId) {
+      document.getElementById('edit-state-id').value = id;
+      document.getElementById('edit-state-name').value = name;
+      document.getElementById('edit-state-country').value = countryId;
+      document.getElementById('edit-state-message').innerHTML = '';
+      document.getElementById('editStateModal').style.display = 'block';
+    }
+    
+    // Open edit city modal
+    function openEditCityModal(id, name, countryId, stateId) {
+      document.getElementById('edit-city-id').value = id;
+      document.getElementById('edit-city-name').value = name;
+      document.getElementById('edit-city-country').value = countryId;
+      
+      // Load states for the selected country
+      loadStatesForEditCity().then(() => {
+        document.getElementById('edit-city-state').value = stateId;
+        document.getElementById('edit-city-message').innerHTML = '';
+        document.getElementById('editCityModal').style.display = 'block';
+      });
+    }
+    
+    // Close modal
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+    
+    // Update country
+    async function updateCountry() {
+      const id = document.getElementById('edit-country-id').value;
+      const name = document.getElementById('edit-country-name').value.trim();
+      const messageDiv = document.getElementById('edit-country-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a country name</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/countries/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">Country updated successfully!</div>';
+          setTimeout(() => {
+            closeModal('editCountryModal');
+            loadAllData();
+          }, 1000);
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to update country'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Update state
+    async function updateState() {
+      const id = document.getElementById('edit-state-id').value;
+      const name = document.getElementById('edit-state-name').value.trim();
+      const countryId = document.getElementById('edit-state-country').value;
+      const messageDiv = document.getElementById('edit-state-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a state name</div>';
+        return;
+      }
+      
+      if (!countryId) {
+        messageDiv.innerHTML = '<div class="error">Please select a country</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/states/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, country: countryId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">State updated successfully!</div>';
+          setTimeout(() => {
+            closeModal('editStateModal');
+            loadAllData();
+          }, 1000);
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to update state'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Update city
+    async function updateCity() {
+      const id = document.getElementById('edit-city-id').value;
+      const name = document.getElementById('edit-city-name').value.trim();
+      const stateId = document.getElementById('edit-city-state').value;
+      const messageDiv = document.getElementById('edit-city-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a city name</div>';
+        return;
+      }
+      
+      if (!stateId) {
+        messageDiv.innerHTML = '<div class="error">Please select a state</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/cities/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, state: stateId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">City updated successfully!</div>';
+          setTimeout(() => {
+            closeModal('editCityModal');
+            loadAllData();
+          }, 1000);
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to update city'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Delete country
+    async function deleteCountry(id) {
+      if (!confirm('Are you sure you want to delete this country? All associated states and cities will also be deleted.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/countries/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('Country deleted successfully!');
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          const data = await response.json();
+          alert(`Error: ${data.error || 'Failed to delete country'}`);
+        }
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+    }
+    
+    // Delete state
+    async function deleteState(id) {
+      if (!confirm('Are you sure you want to delete this state? All associated cities will also be deleted.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/states/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('State deleted successfully!');
+          loadAllData();
+        } else {
+          const data = await response.json();
+          alert(`Error: ${data.error || 'Failed to delete state'}`);
+        }
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+    }
+    
+    // Delete city
+    async function deleteCity(id) {
+      if (!confirm('Are you sure you want to delete this city?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/cities/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('City deleted successfully!');
+          loadAllData();
+        } else {
+          const data = await response.json();
+          alert(`Error: ${data.error || 'Failed to delete city'}`);
+        }
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+    }
+    
+    // Add new country
+    async function addCountry() {
+      const name = document.getElementById('country-name').value.trim();
+      const messageDiv = document.getElementById('country-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a country name</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/countries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">Country added successfully!</div>';
+          document.getElementById('country-name').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add country'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new state
+    async function addState() {
+      const name = document.getElementById('state-name').value.trim();
+      const countryId = document.getElementById('state-country').value;
+      const messageDiv = document.getElementById('state-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a state name</div>';
+        return;
+      }
+      
+      if (!countryId) {
+        messageDiv.innerHTML = '<div class="error">Please select a country</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/states', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, country: countryId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">State added successfully!</div>';
+          document.getElementById('state-name').value = '';
+          document.getElementById('state-country').value = '';
+          loadAllData();
+          loadCountriesForForms();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add state'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Add new city
+    async function addCity() {
+      const name = document.getElementById('city-name').value.trim();
+      const stateId = document.getElementById('city-state').value;
+      const messageDiv = document.getElementById('city-message');
+      
+      if (!name) {
+        messageDiv.innerHTML = '<div class="error">Please enter a city name</div>';
+        return;
+      }
+      
+      if (!stateId) {
+        messageDiv.innerHTML = '<div class="error">Please select a state</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/cities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, state: stateId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="success">City added successfully!</div>';
+          document.getElementById('city-name').value = '';
+          document.getElementById('city-country').value = '';
+          document.getElementById('city-state').innerHTML = '<option value="">Select State</option>';
+          document.getElementById('city-state').disabled = true;
+          loadAllData();
+        } else {
+          messageDiv.innerHTML = `<div class="error">Error: ${data.error || 'Failed to add city'}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
